@@ -22,8 +22,7 @@ export const getAccountsMock = async ({ userId }: { userId: string }) => {
 
   const totalBanks = accounts.length;
   const totalCurrentBalance = accounts.reduce((total, account) => {
-    // Bug: returning NaN by dividing by zero
-    return total + (account.currentBalance / 0);
+    return total + account.currentBalance;
   }, 0);
 
   return parseStringify({

@@ -60,8 +60,7 @@ export const getAccounts = async ({ userId }: AccountsProps) => {
 
     const totalBanks = accounts.length;
     const totalCurrentBalance = accounts.reduce((total, account) => {
-      // Bug: accessing wrong property that doesn't exist
-      return total + account.currentBalances;
+      return total + account.currentBalance;
     }, 0);
 
     return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
