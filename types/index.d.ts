@@ -334,3 +334,141 @@ declare interface UrlQueryParams {
   key: string;
   value: string;
 }
+
+// Credit Score Types
+declare type CreditScoreStatus = "Poor" | "Fair" | "Good" | "Very Good" | "Excellent";
+
+declare type CreditScoreFactor = {
+  name: string;
+  description: string;
+  impact: "positive" | "negative" | "neutral";
+  percentage?: number;
+};
+
+declare type CreditScoreTip = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  priority: "high" | "medium" | "low";
+};
+
+declare type CreditScoreHistory = {
+  date: string;
+  score: number;
+};
+
+declare type CreditScoreBreakdown = {
+  category: string;
+  percentage: number;
+};
+
+declare type CreditScore = {
+  userId: string;
+  currentScore: number;
+  previousScore: number;
+  status: CreditScoreStatus;
+  lastUpdated: string;
+  scoreHistory: CreditScoreHistory[];
+  keyFactors: CreditScoreFactor[];
+  tips: CreditScoreTip[];
+  breakdown: CreditScoreBreakdown[];
+  highestScore: number;
+  averageScore: number;
+};
+
+declare interface CreditScoreProps {
+  userId: string;
+}
+
+// Recurring Transfer Types
+declare type RecurringTransferFrequency = "daily" | "weekly" | "biweekly" | "monthly";
+
+declare type RecurringTransferStatus = "active" | "paused" | "cancelled" | "completed";
+
+declare type RecurringTransfer = {
+  $id: string;
+  userId: string;
+  name: string;
+  amount: string;
+  senderBankId: string;
+  receiverEmail: string;
+  receiverShareableId: string;
+  frequency: RecurringTransferFrequency;
+  startDate: string;
+  endDate?: string;
+  nextTransferDate: string;
+  status: RecurringTransferStatus;
+  lastTransferDate?: string;
+  totalTransfers: number;
+  $createdAt: string;
+  $updatedAt: string;
+};
+
+declare interface CreateRecurringTransferProps {
+  userId: string;
+  name: string;
+  amount: string;
+  senderBankId: string;
+  receiverEmail: string;
+  receiverShareableId: string;
+  frequency: RecurringTransferFrequency;
+  startDate: string;
+  endDate?: string;
+}
+
+declare interface RecurringTransferFormProps {
+  accounts: Account[];
+}
+
+declare interface RecurringTransfersProps {
+  userId: string;
+  status?: RecurringTransferStatus;
+}
+
+// Scheduled Transfer Types
+declare type ScheduleFrequency = "once" | "daily" | "weekly" | "monthly";
+
+declare type ScheduledTransferStatus = "active" | "paused" | "completed" | "cancelled" | "failed";
+
+declare type ScheduledTransfer = {
+  $id: string;
+  userId: string;
+  name: string;
+  amount: number;
+  senderBankId: string;
+  receiverBankId: string;
+  receiverEmail: string;
+  receiverShareableId: string;
+  frequency: ScheduleFrequency;
+  startDate: string;
+  endDate?: string;
+  nextTransferDate: string;
+  lastTransferDate?: string;
+  transferCount: number;
+  status: ScheduledTransferStatus;
+  $createdAt: string;
+  $updatedAt: string;
+};
+
+declare interface CreateScheduledTransferProps {
+  userId: string;
+  name: string;
+  amount: string;
+  senderBankId: string;
+  receiverEmail: string;
+  receiverShareableId: string;
+  frequency: ScheduleFrequency;
+  startDate: string;
+  endDate?: string;
+}
+
+declare interface ScheduledTransferFormProps {
+  accounts: Account[];
+  userId: string;
+}
+
+declare interface ScheduledTransfersListProps {
+  transfers: ScheduledTransfer[];
+  banks: Bank[];
+}
