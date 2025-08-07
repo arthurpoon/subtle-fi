@@ -7,10 +7,23 @@ import { parseStringify } from "@/lib/utils";
 
 import { getTransactionsByBankId } from "@/lib/actions/transaction.actions";
 import { getBank, getBanks } from "@/lib/actions/user.actions";
+import { isMockMode } from "@/lib/mock-config";
+import {
+  getAccountsMock,
+  getAccountMock,
+  getInstitutionMock,
+  getTransactionsMock,
+  createLinkTokenMock,
+} from "@/lib/actions/bank.actions.mock";
 
 // Get multiple bank accounts
 export const getAccounts = async ({ userId }: AccountsProps) => {
   try {
+    // Check if in mock mode
+    if (isMockMode()) {
+      return await getAccountsMock({ userId });
+    }
+
     // get banks from db
     const banks = await getBanks({ userId });
 
@@ -47,7 +60,8 @@ export const getAccounts = async ({ userId }: AccountsProps) => {
 
     const totalBanks = accounts.length;
     const totalCurrentBalance = accounts.reduce((total, account) => {
-      return total + account.currentBalance;
+      // Bug: accessing wrong property that doesn't exist
+      return total + account.currentBalances;
     }, 0);
 
     return parseStringify({ data: accounts, totalBanks, totalCurrentBalance });
@@ -59,6 +73,11 @@ export const getAccounts = async ({ userId }: AccountsProps) => {
 // Get one bank account
 export const getAccount = async ({ appwriteItemId }: AccountProps) => {
   try {
+    // Check if in mock mode
+    if (isMockMode()) {
+      return await getAccountMock({ appwriteItemId });
+    }
+
     // get bank from db
     const bank = await getBank({ documentId: appwriteItemId });
 

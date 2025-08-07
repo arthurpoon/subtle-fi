@@ -11,6 +11,8 @@ import {
   extractCustomerIdFromUrl,
   parseStringify,
 } from "@/lib/utils";
+import { isMockMode } from "@/lib/mock-config";
+import { MOCK_BANKS, MOCK_USER } from "@/lib/mock-data";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { ID, Query } from "node-appwrite";
@@ -29,6 +31,11 @@ const {
 
 export const getUserInfo = async ({ userId }: UserInfoProps) => {
   try {
+    // In mock mode, return mock user
+    if (isMockMode()) {
+      return parseStringify({ ...MOCK_USER, userId, $id: userId });
+    }
+
     const { database } = await createAdminClient();
 
     const user = await database.listDocuments(
@@ -37,14 +44,43 @@ export const getUserInfo = async ({ userId }: UserInfoProps) => {
       [Query.equal("userId", [userId])],
     );
 
+    if (!user.documents || user.documents.length === 0) {
+      console.error("No user found with userId:", userId);
+      return null;
+    }
+
     return parseStringify(user.documents[0]);
   } catch (error) {
-    console.error("Error", error);
+    console.error("Error getting user info:", error);
+    return null;
   }
 };
 
 export const signInUser = async ({ email, password }: SignInProps) => {
   try {
+    // In mock mode, simulate sign in
+    if (isMockMode()) {
+      // Check if it's a valid mock user
+      if (email === MOCK_USER.email || email.includes("@example.com")) {
+        const mockUserId = "mock_user_" + email.replace("@", "_at_");
+        cookies().set("appwrite-session", "mock-session-" + Date.now(), {
+          path: "/",
+          httpOnly: true,
+          sameSite: "strict",
+          secure: false, // Allow in development
+        });
+
+        return parseStringify({
+          ...MOCK_USER,
+          userId: mockUserId,
+          $id: mockUserId,
+          email,
+        });
+      } else {
+        throw new Error("Invalid credentials");
+      }
+    }
+
     const { account } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
@@ -57,9 +93,14 @@ export const signInUser = async ({ email, password }: SignInProps) => {
 
     const user = await getUserInfo({ userId: session.userId });
 
+    if (!user) {
+      throw new Error("User not found after sign in");
+    }
+
     return parseStringify(user);
   } catch (error) {
-    console.error("Error", error);
+    console.error("Sign in error:", error);
+    throw error;
   }
 };
 
@@ -81,14 +122,24 @@ export const createNewUser = async ({
 
     if (!newUserAccount) throw new Error("Error creating user");
 
-    const dwollaCustomerUrl = await createDwollaCustomer({
-      ...userData,
-      type: "personal",
-    });
+    let dwollaCustomerUrl = "";
+    let dwollaCustomerId = "";
 
-    if (!dwollaCustomerUrl) throw new Error("Error creating Dwolla customer");
+    // Skip Dwolla in mock mode
+    if (!isMockMode()) {
+      dwollaCustomerUrl = await createDwollaCustomer({
+        ...userData,
+        type: "personal",
+      });
 
-    const dwollaCustomerId = extractCustomerIdFromUrl(dwollaCustomerUrl);
+      if (!dwollaCustomerUrl) throw new Error("Error creating Dwolla customer");
+      dwollaCustomerId = extractCustomerIdFromUrl(dwollaCustomerUrl);
+    } else {
+      // Mock Dwolla data
+      dwollaCustomerId = "mock_customer_" + Date.now();
+      dwollaCustomerUrl =
+        "https://api-sandbox.dwolla.com/customers/" + dwollaCustomerId;
+    }
 
     const newUser = await database.createDocument(
       DATABASE_ID!,
@@ -119,6 +170,21 @@ export const createNewUser = async ({
 
 export async function getCurrentUser() {
   try {
+    // In mock mode, check for mock session
+    if (isMockMode()) {
+      const cookieStore = cookies();
+      const mockSession = cookieStore.get("appwrite-session");
+      
+      if (mockSession && mockSession.value.startsWith("mock-session-")) {
+        // Extract email from session or use default
+        return parseStringify({
+          ...MOCK_USER,
+          $id: MOCK_USER.userId,
+        });
+      }
+      return null;
+    }
+
     const { account } = await createSessionClient();
 
     const result = await account.get();
@@ -134,6 +200,12 @@ export async function getCurrentUser() {
 
 export const signOutUser = async () => {
   try {
+    // In mock mode, just delete the cookie
+    if (isMockMode()) {
+      cookies().delete("appwrite-session");
+      return;
+    }
+    
     const { account } = await createSessionClient();
     cookies().delete("appwrite-session");
     await account.deleteSession("current");
@@ -144,6 +216,11 @@ export const signOutUser = async () => {
 
 export const createLinkToken = async (user: User) => {
   try {
+    // Check if in mock mode
+    if (isMockMode()) {
+      return parseStringify({ linkToken: "mock-link-token-" + Date.now() });
+    }
+
     const tokenParams = {
       user: {
         client_user_id: user.$id,
@@ -259,6 +336,11 @@ export const exchangePublicToken = async ({
 // get user bank accounts
 export const getBanks = async ({ userId }: BanksProps) => {
   try {
+    // Check if in mock mode
+    if (isMockMode()) {
+      return parseStringify(MOCK_BANKS.map(bank => ({ ...bank, userId })));
+    }
+
     const { database } = await createAdminClient();
 
     const banks = await database.listDocuments(
